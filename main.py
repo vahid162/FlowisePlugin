@@ -1,32 +1,48 @@
+from langbot_plugin_base import PluginBase
 import requests
 
-# تنظیمات آدرس API Flowise
-FLOWISE_API_URL = "http://flow.gpantex.com/api/v1/prediction/<flow-id>"  # آیدی فلو را جایگزین کن
-# اگر Flowise نیاز به کلید API دارد، این خط را فعال کن و مقداردهی کن
-# FLOWISE_API_KEY = "<YOUR_API_KEY>"
+class FlowisePlugin(PluginBase):
+    # متادیتا پلاگین - این موارد باید حتماً باشند
+    name = "FlowisePlugin"
+    description = "Connect Langbot to FlowiseAI"
+    author = "vahid162"
+    version = "1.0.0"
+    
+    # تعریف دستورات
+    def commands(self):
+        return [
+            {
+                "name": "flowise",
+                "description": "سوال خود را به Flowise ارسال و پاسخ هوشمند دریافت کنید",
+                "usage": "/flowise <متن سوال شما>"
+            }
+        ]
+    
+    # ثبت handler اصلی پیام‌ها
+    def on_message(self, message, context):
+        if message.content.strip().startswith("/flowise"):
+            question = message.content.replace("/flowise", "", 1).strip()
+            if not question:
+                return "لطفا سوال خود را پس از /flowise بنویسید"
+            
+            # آدرس فلو را اینجا قرار بده
+            FLOWISE_API_URL = "https://flow.gpantex.com/api/v1/prediction/50defcc1-aed6-40ba-9dd5-4330e1d2313b"
+            
+            payload = {"input": question}
+            headers = {"Content-Type": "application/json"}
+            # اگر Flowise کلید می‌خواهد:
+            # headers["Authorization"] = "Bearer <API_KEY>"
+            
+            try:
+                r = requests.post(FLOWISE_API_URL, json=payload, headers=headers, timeout=15)
+                r.raise_for_status()
+                res_data = r.json()
+                reply = res_data.get("text") or res_data.get("output") or str(res_data)
+                return reply
+            except Exception as e:
+                return f"❌ خطا در ارتباط با Flowise: {e}"
 
-def on_message_received(message, user_id=None, context=None):
-    """
-    این تابع پیام‌های دریافتی را چک می‌کند و اگر با دستور /flowise شروع شده باشد،
-    پرسش را به Flowise می‌فرستد و پاسخ را برمی‌گرداند.
-    """
-    if message.startswith("/flowise "):   # فقط پیام‌هایی که با این دستور شروع شود
-        user_prompt = message[len("/flowise "):].strip()
-        payload = {"input": user_prompt}
-        headers = {"Content-Type": "application/json"}
-        # اگر کلید API نیاز است، این خط را فعال کن:
-        # headers["Authorization"] = f"Bearer {FLOWISE_API_KEY}"
-        try:
-            resp = requests.post(FLOWISE_API_URL, json=payload, headers=headers, timeout=15)
-            resp.raise_for_status()
-            res_data = resp.json()
-            # پاسخ را از خروجی مناسب استخراج می‌کنیم
-            reply = res_data.get("text") or res_data.get("output") or str(res_data)
-            return reply
-        except Exception as e:
-            return f"❌ خطا در ارتباط با Flowise: {e}"
-    # در غیر این صورت، هیچ پاسخی برگشت داده نشود
-    return None
+        return None  # اگر دستور نبود هیچ اتفاقی نمی‌افتد
 
-def register_plugin(plugin_manager):
-    plugin_manager.register_message_handler(on_message_received)
+def setup():
+    return FlowisePlugin()
