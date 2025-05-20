@@ -1,48 +1,35 @@
-from langbot_plugin_base import PluginBase
+from langplugin.plugin import Plugin, on_message
 import requests
 
-class FlowisePlugin(PluginBase):
-    # متادیتا پلاگین - این موارد باید حتماً باشند
-    name = "FlowisePlugin"
-    description = "Connect Langbot to FlowiseAI"
-    author = "vahid162"
-    version = "1.0.0"
-    
-    # تعریف دستورات
-    def commands(self):
-        return [
-            {
-                "name": "flowise",
-                "description": "سوال خود را به Flowise ارسال و پاسخ هوشمند دریافت کنید",
-                "usage": "/flowise <متن سوال شما>"
-            }
-        ]
-    
-    # ثبت handler اصلی پیام‌ها
-    def on_message(self, message, context):
-        if message.content.strip().startswith("/flowise"):
-            question = message.content.replace("/flowise", "", 1).strip()
-            if not question:
-                return "لطفا سوال خود را پس از /flowise بنویسید"
-            
-            # آدرس فلو را اینجا قرار بده
+class FlowisePlugin(Plugin):
+    def __init__(self):
+        super().__init__(
+            name="FlowisePlugin",
+            version="1.0.0",
+            author="vahid162",
+            description="Flowise API connector for Langbot"
+        )
+
+    @on_message
+    def handle_message(self, ctx):
+        if ctx.content.strip().startswith('/flowise'):
+            user_question = ctx.content[len('/flowise'):].strip()
+            if not user_question:
+                return "لطفاً سوال خود را بعد از /flowise بنویسید."
+
             FLOWISE_API_URL = "https://flow.gpantex.com/api/v1/prediction/50defcc1-aed6-40ba-9dd5-4330e1d2313b"
-            
-            payload = {"input": question}
+            payload = {"input": user_question}
             headers = {"Content-Type": "application/json"}
-            # اگر Flowise کلید می‌خواهد:
+            # اگر کلید API لازم بود اضافه کن:
             # headers["Authorization"] = "Bearer <API_KEY>"
-            
             try:
                 r = requests.post(FLOWISE_API_URL, json=payload, headers=headers, timeout=15)
                 r.raise_for_status()
-                res_data = r.json()
-                reply = res_data.get("text") or res_data.get("output") or str(res_data)
+                res = r.json()
+                reply = res.get("text") or res.get("output") or str(res)
                 return reply
             except Exception as e:
                 return f"❌ خطا در ارتباط با Flowise: {e}"
-
-        return None  # اگر دستور نبود هیچ اتفاقی نمی‌افتد
 
 def setup():
     return FlowisePlugin()
